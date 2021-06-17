@@ -556,6 +556,47 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
             #               item['content'])
             pass
 
+# When a daily recurring task that is overdue is completed, the next occurence
+# of the task is set to tomorrow. This code will change it to one day prior
+# if the time has not already elapsed
+most_recent_event = None
+
+def overdue_recurring_completed(args, api, label_id, regen_labels_id):
+    # get current list of events
+    events = api.activity.get()['events']
+
+    curr = 0
+    if most_recent_event is None:
+        # if there are no events
+        if events is "" or events is None:
+            return;
+        # else,
+        most_recent_event = events[curr]['event_date']
+    # if an event has occured since the last function call
+    else:
+        # look through the events that have occured since
+        while events[curr]['event_date'] != most_recent_event:
+            event = events[curr]
+
+            # if a recurring task has been completed
+            if event['event_type'] == 'completed' \
+                and api.items.get_by_id(event['object_id'])['due']['is_recurring']:
+                
+                # get the previous date of that event (somehow)
+
+                # if previous date was before today and new date is tomorrow
+                    # if new date - one day is after current time, subtract one
+                    # day from the date on the recurring task
+                    new_date = 'something'
+                    api.item_update(id=event['object_id'], due=new_date)
+
+
+            curr += 1
+
+    # set the new most recent event
+    most_recent_event = events[0]['event_date']
+    
+
 # Contains all main autodoist functionalities
 
 
@@ -564,6 +605,8 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
     # Preallocate dictionaries
     overview_item_ids = {}
     overview_item_labels = {}
+
+    # call overdue
 
     for project in api.projects.all():
 
