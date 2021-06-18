@@ -556,19 +556,41 @@ def run_recurring_lists_logic(args, api, item, child_items, child_items_all, reg
             #               item['content'])
             pass
 
+# get datetime from todoist time string
+def convert_time(task_date):
+    if 'T' in task_date:
+        task_date = task_date.replace('T', ' ')
+        task_dt = datetime.strptime(task_date, '%Y-%m-%d %H:%M:%S')        
+    else:
+        task_dt = datetime.strptime(task_date, '%Y-%m-%d')
+
+    return task_dt
+
+# get timedelta representing difference in current time and task time:
+def time_diff(task_time):
+    return datetime.now() - convert_time(task_time)
+ 
+
 # When a daily recurring task that is overdue is completed, the next occurence
 # of the task is set to tomorrow. This code will change it to one day prior
 # if the time has not already elapsed
-most_recent_event = None
 
-def overdue_recurring_completed(args, api, label_id, regen_labels_id):
+
+most_recent_event = None
+exp_recurring_tasks = {} #expired recurring tasks
+def overdue_recurring_completed(api):
+    global most_recent_event
+    global exp_recurring_tasks
+
+    # options for daily recurring task strings
+    daily_str = ['every day', 'ev day', 'daily']
+
     # get current list of events
     events = api.activity.get()['events']
-
     curr = 0
     if most_recent_event is None:
         # if there are no events
-        if events is "" or events is None:
+        if events == "" or events is None:
             return;
         # else,
         most_recent_event = events[curr]['event_date']
@@ -579,18 +601,52 @@ def overdue_recurring_completed(args, api, label_id, regen_labels_id):
             event = events[curr]
 
             # if a recurring task has been completed
-            if event['event_type'] == 'completed' \
-                and api.items.get_by_id(event['object_id'])['due']['is_recurring']:
+            task = api.items.get_by_id(event['object_id'])
+            if event['event_type'] == 'completed' and task['due']['is_recurring']:
+                print('recurring event completed')
+
+                if(most_recent_event is None):
+                    logging.debug('Expired recurring tasks failed to be stored')
+                    return
                 
-                # get the previous date of that event (somehow)
+                # get the previous date of that task
+                prev = convert_time(exp_recurring_tasks[event['object_id']])
 
-                # if previous date was before today and new date is tomorrow
-                    # if new date - one day is after current time, subtract one
-                    # day from the date on the recurring task
-                    new_date = 'something'
-                    api.item_update(id=event['object_id'], due=new_date)
+                # use a list comprehension to find if the task recurring string
+                # matches one of the options for the possible daily recurring
+                # task strings
+                daily = sum([x in task['due']['string'] for x in daily_str]) > 0
+                print(daily)
 
+                # was the previous date yesterday
+                prev_yesterday = prev.date() == datetime.today().date() - timedelta(days=1)
+                print(prev_yesterday)
 
+                # is the new date tomorrow
+                new_tom = convert_time(task['due']['date']).date() == datetime.today().date() + timedelta(days=1)
+                print(new_tom)
+
+                # if i move the new date back a day, will it be expired
+                if 'T' in task['due']['date']:
+                    can_move_back = datetime.now() - (convert_time(task['due']['date']) - timedelta(days = 1)) < timedelta(0)
+                else:
+                    can_move_back = datetime.now().date() - (convert_time(task['due']['date']).date() - timedelta(days=1)) == timedelta(0)
+                print(can_move_back)
+
+                if daily and prev_yesterday and new_tom and can_move_back:
+                    logging.debug('completed recurring task being moved to today')
+                    dt_new_date = convert_time(task['due']['date']) - timedelta(days=1)
+                    #calculate new date in todoist-ese
+                    if not 'T' in task['due']['date']:
+                        new_date = dt_new_date.strftime('%Y-%m-%d')
+                    else:
+                        new_date = str(dt_new_date.strftime('%Y-%m-%d')) + 'T' + str(dt_new_date.strftime('%H:%M:%S'))
+
+                    print(new_date)
+                    due = task['due']
+                    due['date'] = new_date
+                    api.items.get_by_id(event['object_id']).update(due=new_date)
+                    api.commit()
             curr += 1
 
     # set the new most recent event
@@ -600,7 +656,9 @@ def overdue_recurring_completed(args, api, label_id, regen_labels_id):
 # Contains all main autodoist functionalities
 
 
+
 def autodoist_magic(args, api, label_id, regen_labels_id):
+    global exp_recurring_tasks
 
     # Preallocate dictionaries
     overview_item_ids = {}
@@ -677,6 +735,12 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                 # For all items in this section
                 for item in items:
                     active_type = None  # Reset
+
+                    # if item is an expired recurring task, hold onto its ID and due date
+                    # this is for use of overdue_recurring_completed function
+                    if item and item['due'] and item['due']['is_recurring'] and (time_diff(item['due']['date']) > timedelta(0)):
+                        #print('recurring item detected')
+                        exp_recurring_tasks[item['id']] = item['due']['date']
 
                     # Possible nottes routine for the future
                     # notes = api.notes.all() TODO: Quick notes test to see what the impact is?
@@ -930,6 +994,9 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                             logging.warning(
                                 'Wrong start-date format for item: %s. Please use "start=due-<NUM><d or w>"', item['content'])
                             continue
+
+    # call overdue_recurring_completed
+    overdue_recurring_completed(api)
 
     return overview_item_ids, overview_item_labels
 

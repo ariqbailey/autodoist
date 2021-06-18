@@ -62,3 +62,4 @@ target/
 # VSCODE
 .json
 .vscode
+test.ipynb
