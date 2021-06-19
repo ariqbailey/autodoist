@@ -143,10 +143,10 @@ def initialise(args):
 
     logging.info("You are running with the following functionalities:\n\n   Next action labelling mode: {}\n   Regenerate sub-tasks mode: {}\n   Shifted end-of-day mode: {}\n".format(*modes))
 
-    if m_num == 0:
-        logging.info(
-            "\n No functionality has been enabled. Please see --help for the available options.\n")
-        exit(0)
+    # if m_num == 0:
+    #     logging.info(
+    #         "\n No functionality has been enabled. Please see --help for the available options.\n")
+    #     exit(0)
 
     # Run the initial sync
     logging.debug('Connecting to the Todoist API')
@@ -642,11 +642,12 @@ def overdue_recurring_completed(api):
                     else:
                         new_date = str(dt_new_date.strftime('%Y-%m-%d')) + 'T' + str(dt_new_date.strftime('%H:%M:%S'))
 
-                    print(new_date)
+                    print(f"|{new_date}|")
                     due = task['due']
-                    due['date'] = new_date
-                    api.items.get_by_id(event['object_id']).update(due=new_date)
-                    api.commit()
+                    print(due)
+                    due['date'] = str(new_date)
+                    task.update(due=due)
+                    # api.commit()
             curr += 1
 
     # set the new most recent event
