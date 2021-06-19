@@ -642,7 +642,6 @@ def overdue_recurring_completed(api):
                     else:
                         new_date = str(dt_new_date.strftime('%Y-%m-%d')) + 'T' + str(dt_new_date.strftime('%H:%M:%S'))
 
-                    print(f"|{new_date}|")
                     due = task['due']
                     print(due)
                     due['date'] = str(new_date)
