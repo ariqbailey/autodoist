@@ -134,14 +134,14 @@ def initialise(args):
     # Show which modes are enabled:
     modes = []
     m_num = 0
-    for x in [args.label, args.regeneration, args.end]:
+    for x in [args.label, args.regeneration, args.end, args.overdue]:
         if x:
             modes.append('Enabled')
             m_num += 1
         else:
             modes.append('Disabled')
 
-    logging.info("You are running with the following functionalities:\n\n   Next action labelling mode: {}\n   Regenerate sub-tasks mode: {}\n   Shifted end-of-day mode: {}\n".format(*modes))
+    logging.info("You are running with the following functionalities:\n\n   Next action labelling mode: {}\n   Regenerate sub-tasks mode: {}\n   Shifted end-of-day mode: {}\n   Changed overdue recurring task completion mode: {}\n".format(*modes))
 
     # if m_num == 0:
     #     logging.info(
@@ -590,7 +590,7 @@ def overdue_recurring_completed(api):
     curr = 0
     if most_recent_event is None:
         # if there are no events
-        if events == "" or events is None:
+        if events is None or events == "":
             return;
         # else,
         most_recent_event = events[curr]['event_date']
@@ -603,10 +603,10 @@ def overdue_recurring_completed(api):
             # if a recurring task has been completed
             task = api.items.get_by_id(event['object_id'])
             if event['event_type'] == 'completed' and task['due']['is_recurring']:
-                print('recurring event completed')
+                # print('recurring event completed')
 
-                if(most_recent_event is None):
-                    logging.debug('Expired recurring tasks failed to be stored')
+                if not exp_recurring_tasks:
+                    logging.error('ERROR: Expired recurring tasks failed to be stored')
                     return
                 
                 # get the previous date of that task
@@ -634,7 +634,7 @@ def overdue_recurring_completed(api):
                 print(can_move_back)
 
                 if daily and prev_yesterday and new_tom and can_move_back:
-                    logging.debug('completed recurring task being moved to today')
+                    logging.info('completed recurring task being moved to today')
                     dt_new_date = convert_time(task['due']['date']) - timedelta(days=1)
                     #calculate new date in todoist-ese
                     if not 'T' in task['due']['date']:
@@ -647,7 +647,6 @@ def overdue_recurring_completed(api):
                     print(due)
                     due['date'] = str(new_date)
                     task.update(due=due)
-                    # api.commit()
             curr += 1
 
     # set the new most recent event
@@ -739,8 +738,7 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
 
                     # if item is an expired recurring task, hold onto its ID and due date
                     # this is for use of overdue_recurring_completed function
-                    if item and item['due'] and item['due']['is_recurring'] and (time_diff(item['due']['date']) > timedelta(0)):
-                        #print('recurring item detected')
+                    if args.overdue is not None and args.overdue and item and item['due'] and item['due']['is_recurring'] and (time_diff(item['due']['date']) > timedelta(0)):
                         exp_recurring_tasks[item['id']] = item['due']['date']
 
                     # Possible nottes routine for the future
@@ -997,7 +995,8 @@ def autodoist_magic(args, api, label_id, regen_labels_id):
                             continue
 
     # call overdue_recurring_completed
-    overdue_recurring_completed(api)
+    if args.overdue is not None and args.overdue:
+        overdue_recurring_completed(api)
 
     return overview_item_ids, overview_item_labels
 
@@ -1018,6 +1017,8 @@ def main():
         '-l', '--label', help='enable next action labelling. Define which label to use.', type=str)
     parser.add_argument(
         '-r', '--regeneration', help='enable regeneration of sub-tasks in recurring lists. Chose overall mode: 0 - regen off, 1 - regen all (default),  2 - regen only if all sub-tasks are completed. Task labels can be used to overwrite this mode.', nargs='?', const='1', default=None, type=int)
+    parser.add_argument(
+        '-o', '--overdue', help='overdue daily tasks next occurence gets set to today instead of tomorrow. Chose mode: 0 - off, 1 - on', nargs='?', const='1', default=None, type=int)
     parser.add_argument(
         '-e', '--end', help='enable alternative end-of-day time instead of default midnight. Enter a number from 1 to 24 to define which hour is used.', type=int)
     parser.add_argument(
@@ -1044,6 +1045,7 @@ def main():
                         default=None, choices=['parallel', 'sequential'])
 
     args = parser.parse_args()
+    print(args)
 
     # Addition of regeneration labels
     args.regen_label_names = ('Regen_off', 'Regen_all',
