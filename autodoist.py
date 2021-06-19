@@ -643,7 +643,6 @@ def overdue_recurring_completed(api):
                         new_date = str(dt_new_date.strftime('%Y-%m-%d')) + 'T' + str(dt_new_date.strftime('%H:%M:%S'))
 
                     due = task['due']
-                    print(due)
                     due['date'] = str(new_date)
                     task.update(due=due)
             curr += 1
