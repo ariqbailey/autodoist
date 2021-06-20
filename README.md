@@ -8,6 +8,7 @@ This program adds four major functionalities to Todoist to help automate your wo
 2) Enable regeneration of sub-tasks in lists with a recurring date. Multiple modes possile.
 3) Postpone the end-of-day time to after midnight to finish your daily recurring tasks
 4) Make multiple items (un)checkable at the same time
+5) Overdue daily recurring tasks next occurence can be made to be scheduled for today instead of tomorrow when completed.
 
 If this tool helped you out, I would really appreciate your support by providing me with some coffee!
 
@@ -129,6 +130,10 @@ If you want to enable regeneration of sub-tasks in recurring lists, run with the
 If you want to enable an alternative end-of-day, run with the `-e` argument and a number from 1 to 24 to specify which hour:
 
     python autodoist.py -a <API Key> -e <NUMBER>
+    
+If you want to enable alternative overdue recurring task functionality, run with the `-o` argument followed by a mode number for the overall functionality (0: behavior off, 1: behavior on):
+
+    python autodoist.py -a <API Key> -o <NUMBER>
     
 These modes can be run individually, or combined with each other.
 
