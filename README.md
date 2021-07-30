@@ -111,6 +111,12 @@ Todoist allows the asterisk symbol `* ` to be used to ensure tasks can't be chec
 
 Simply add `** ` or `!* ` in front of a project, section, or top item, to automatically turn all the items that it includes into respectively headers or checkable tasks.
 
+# 5. Change overdue recurring task completion behavior.
+
+You have a task that you need to complete every day. You can't do it one day, and complete it the following morning. You still want to complete the task again later that day, but when you check off the task, Todoist sets the next occurence as the following day!
+
+By enabling this mode, overdue daily recurring tasks' next occurence will be set to today instead of tomorrow. This only applies to tasks that can be moved back. For example if you have a recurring task daily at 7am, and it is 10am, the task will not move back to today.
+
 # Executing Autodoist
 
 You can run Autodoist from any system that supports Python.
